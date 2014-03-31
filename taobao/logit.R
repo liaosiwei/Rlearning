@@ -1,8 +1,9 @@
 logit <- function(one.user.data) {
   d <- with(one.user.data, xtabs(~ brand_id + type, one.user.data))
   if ("1" %in% dimnames(d)$type) {
-    w <- d[, 2] > 1
+    w <- (d[, 2] > 1)
     d[w, 1] <- d[w, 1] / d[w, 2]
+    d[w, 2] <- 1
     y <- d[, 2]
     x <- d[, 1]
   } else {
