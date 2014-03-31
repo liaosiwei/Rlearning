@@ -10,4 +10,11 @@ tdata <- tdata[order(tdata$user_id, tdata$brand_id), ]
 
 len = nrow(tdata)
 
-addtype = matrix(0, nrow=len, ncol=4)
+ids = as.integer(levels(as.factor(tdata$user_id)))
+
+getrules <- function(id, indata) {
+  input <- indata[indata$user_id == id,]
+  do_aprior(count(nrow(input), input))
+}
+
+ruleslist = lapply(ids, getrules, tdata)

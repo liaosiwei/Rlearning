@@ -25,16 +25,5 @@ addtype = count(len, tdata)
 
 tdata <- cbind(tdata[,c(-3)], addtype)
 
-library("arules")
-indata <- as.data.frame(addtype)
-
-indata[, 1] <- ordered(cut(indata[, 1], c(-1, mean(indata[, 1][indata[, 1] > 0]), Inf)), labels=c("low", "high"))
-indata[, 2] <- ordered(cut(indata[, 2], c(-1, mean(indata[, 2][indata[, 2] > 0]), Inf)), labels=c("low", "high"))
-indata[, 3] <- ordered(cut(indata[, 3], c(-1, mean(indata[, 3][indata[, 3] > 0]), Inf)), labels=c("low", "high"))
-indata[, 4] <- ordered(cut(indata[, 4], c(-1, mean(indata[, 4][indata[, 4] > 0]), Inf)), labels=c("low", "high"))
-
-rules <- apriori(indata, parameter=list(supp=0.8, conf=0.8))
-rulesBuyLow <- subset(rules, subset = rhs %in% "type1=low")
-rulesBuyHigh <- subset(rules, subset = rhs %in% "type1=high")
-inspect(rulesBuyHigh)
-inspect(rulesBuyLow)
+rules <- do_aprior(addtype)
+# for all brand actions
