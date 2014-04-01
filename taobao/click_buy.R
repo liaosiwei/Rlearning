@@ -25,6 +25,6 @@ click_buy <- function(x) {
 }
 
 click_buy_wrapper <- function(one) {
-  res <- preprocess(one)
+  res <- sepdata(one)
   click_buy(res$res)
 }
