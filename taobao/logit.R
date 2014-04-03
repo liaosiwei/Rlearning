@@ -76,3 +76,13 @@ PredictWrapper <- function(input) {
   ids <- as.integer(levels(factor(input$user_id)))
   res <- lapply(ids, compose)
 }
+
+PrintOut <- function(reslist) {
+  for (one in reslist) {
+    if (!is.logical(one$brand_ids)) {
+      if (length(one$brand_ids) != 0) {
+        cat(one$user_id, "\t", one$brand_ids, "\n")
+      }
+    }
+  }
+}
