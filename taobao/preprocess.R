@@ -16,3 +16,35 @@ sepdata <- function(one_person_data) {
   }
   list(res = result, rest = rest_mat)
 }
+
+getone <- function(id, data) {
+  return (data[data$user_id == id, ])
+}
+
+# get the user that his records only include buy
+allsameuser <- function(data, type) {
+  # data: original data
+  # return: all users that their revords only include buy action
+  allsame <- function(id) {
+    one <- data[data$user_id == id, ]
+    return (all(one$type == type))
+  }
+  user_ids = as.integer(levels(factor(data$user_id)))
+  user_ids[unlist(lapply(user_ids, allsame))]
+}
+
+splitdata <- function(data) {
+  allbuy <- allsameuser(data, 1)
+  allclick <- allsameuser(data, 0)
+  buymat <- NULL
+  clickmat <- NULL
+  for (id in allbuy) {
+    buymat <- rbind(buymat, data[data$user_id == id, ])
+    data <- data[data$user_id != id, ]
+  }
+  for (id in allclick) {
+    clickmat <- rbind(clickmat, data[data$user_id == id, ])
+    data <- data[data$user_id != id, ]
+  }
+  return (list(normal = data, allbuy = buymat, allclick = clickmat))
+}
