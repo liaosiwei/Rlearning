@@ -1,5 +1,5 @@
 # separate records from data after buying
-sepdata <- function(one_person_data) {
+filterdata <- function(one_person_data) {
   result <- one_person_data
   rest_mat <- matrix(NA, nrow = 0, ncol = 4, dimnames = list(NULL, c("user_id", "brand_id", "type", "visit_datetime")))
   brand_ids <- as.integer(levels(factor(one_person_data$brand_id)))
@@ -24,7 +24,7 @@ getone <- function(id, data) {
 # get the user that his records only include buy
 allsameuser <- function(data, type) {
   # data: original data
-  # return: all users that their revords only include buy action
+  # return: all users' id that their revords only include buy action
   allsame <- function(id) {
     one <- data[data$user_id == id, ]
     return (all(one$type == type))
@@ -33,6 +33,7 @@ allsameuser <- function(data, type) {
   user_ids[unlist(lapply(user_ids, allsame))]
 }
 
+# split data as three parts: normal action, action only includes buy and that only includes clicks
 splitdata <- function(data) {
   allbuy <- allsameuser(data, 1)
   allclick <- allsameuser(data, 0)
