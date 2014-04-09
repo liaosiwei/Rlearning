@@ -64,6 +64,8 @@ getmodeldata <- function(data, c = 0.8) {
   return (d)
 }
 
+
+
 # get the data to be predicted
 # TODO this predicted data may affect the result significantly
 getpredicteddata <- function(data) {
@@ -76,6 +78,57 @@ getpredicteddata <- function(data) {
     return (NULL)
   res <- summary(factor(last$brand_id), maxsum = Inf)
   return (res)
+}
+
+
+gaussian <- function(input, sigma = 0.8) {
+  # a gaussian function to get weigted month data
+  return (exp(-input^2 / (2*sigma^2)))
+}
+
+# get the data to be predicted
+# add weight to data based on different month
+getwpredicteddata <- function(data) {
+  # data: original one user's data
+  date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
+  date[1] <- as.Date("2014/4/14")
+  date[5] <- as.Date("2014/8/16") # cut doesn't include the edge of the range
+  data <- data[data$type == 0, ]
+  if (nrow(data) == 0) {
+    return (NULL) # for user's record that don't have click action. Maybe include buy or car or save action.. e.g.: user_id = 71250
+  }
+  datefact <- cut(as.Date(factor(data$visit_datetime)), date, labels = c(1, 2, 3, 4))
+  
+  getcount <- function(data) {
+    # data: one user's data
+    return (aggregate(type ~ brand_id, data = data, FUN = length))
+  }
+  
+  res <- by(data, datefact, getcount)
+  mergedata <- data.frame(list(brand_id = unique(data$brand_id)))
+  mergedata$num <- 0
+  nms <- names(res)
+  for (i in seq(nrow(mergedata))) {
+    id <- mergedata[i, 1]
+    tempval <- 0
+    for (name in nms) {
+      d <- res[[name]]
+      if (!is.null(d)) {
+        if (id %in% d$brand_id) {
+          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name))
+        }
+      }
+    }
+    mergedata[i, 2] <- tempval
+  }
+  if (nrow(mergedata) == 0)
+    return (NULL)
+  value <- mergedata$num
+  names(value) <- mergedata$brand_id
+  value <- value[value > 1] 
+  if (length(value) == 0)
+    return (NULL)
+  return (value)
 }
 
 # perform logistic regression on one user data
@@ -101,9 +154,9 @@ predictnormal <- function(data) {
     if (is.null(modeldata)) {
       return (-1) # cannot build model from modeldata
     }
-    predicteddata <- getpredicteddata(oneuser)
+    predicteddata <- getwpredicteddata(oneuser)
     if (is.null(predicteddata)) {
-      return (-2) # doesn't exist last month's data
+      return (-2) # doesn't exist frequent data
     }
     return (dopredict(modeldata, predicteddata))
   }
@@ -136,7 +189,7 @@ predictother <- function(normaldata, otherdata) {
   wrapper <- function(id) {
     print(id)
     one <- otherdata[otherdata$user_id == id, ]
-    predicteddata <- getpredicteddata(one)
+    predicteddata <- getwpredicteddata(one)
     if (is.null(predicteddata)) {
       return (NULL)
     }
