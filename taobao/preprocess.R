@@ -49,3 +49,27 @@ splitdata <- function(data) {
   }
   return (list(normal = data, allbuy = buymat, allclick = clickmat))
 }
+
+seperatedata <- function(data) {
+  user_ids <- as.integer(levels(factor(data$user_id)))
+  allnoclickmat <- NULL
+  clicknobuy <- NULL
+  buynoclick <- NULL
+  nobuynoclick <- NULL
+  for (id in user_ids) {
+    one <- data[data$user_id == id, ]
+    if (0 %in% one$type & (!(1 %in% one$type))) {
+      clicknobuy <- rbind(clicknobuy, one)
+      data <- data[data$user_id != id, ]
+    }
+    if (!(0 %in% one$type) & 1 %in% one$type) {
+      buynoclick <- rbind(buynoclick, one)
+      data <- data[data$user_id != id, ]
+    }
+    if (!any(c(0, 1) %in% one$type)) {
+      nobuynoclick <- rbind(nobuynoclick, one)
+      data <- data[data$user_id != id, ]
+    }
+  }
+  return (list(normal = data, cnb = clicknobuy, bnc = buynoclick, nbnc = nobuynoclick))
+}
