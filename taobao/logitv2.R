@@ -57,6 +57,7 @@ gaussian <- function(input, sigma = 0.8) {
 
 getcount <- function(data) {
   # data: one user's data
+  # result is not ideal which p and r both decreased
   calwlength <- function(v) { # add weight to users' action. 1: 4: 4: 3
     len <- 0
     weight = c(1, 4, 4, 3)
@@ -65,7 +66,7 @@ getcount <- function(data) {
     }
     return (len)
   }
-  return (aggregate(type ~ brand_id, data = data, FUN = calwlength))
+  return (aggregate(type ~ brand_id, data = data, FUN = length))
 }
 
 # get the data to be predicted
@@ -75,7 +76,7 @@ getwpredicteddata <- function(data) {
   date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
   date[1] <- as.Date("2014/4/14")
   date[5] <- as.Date("2014/8/16") # cut doesn't include the edge of the range
-  #data <- data[data$type == 0, ]
+  data <- data[data$type == 0, ]
   if (nrow(data) == 0) {
     return (NULL) # for user's record that don't have click action. Maybe include buy or car or save action.. e.g.: user_id = 71250
   }
@@ -223,7 +224,7 @@ savedata <- function(reslist, filename = "") {
     if (length(reslist[[name]]) > 0) {
       if (reslist[[name]] != -1 & reslist[[name]] != -2 & reslist[[name]] != -3) {
         cat(name, "\t", file = filename, sep = "", append = TRUE)
-        cat(reslist[[name]], file = filename, append = TRUE)
+        cat(reslist[[name]], file = filename, sep = ",", append = TRUE)
         cat("\n", file = filename, sep = "", append = TRUE)
       }
     }
