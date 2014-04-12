@@ -89,12 +89,12 @@ mainV3 <- function(data, filename = "") {
   
   # step 2: using unnormal data to predict
   # the data include res$cnb, res$bnc, res$nbnc
-#   other <- res$cnb
-#   other <- rbind(other, res$bnc)
-#   other <- rbind(other, res$nbnc)
-#   for (id in elist$err1) {
-#     other <- rbind(other, data[data$user_id == id, ])   # add dataset that y is no binary
-#   }
+  #   other <- res$cnb
+  #   other <- rbind(other, res$bnc)
+  #   other <- rbind(other, res$nbnc)
+  #   for (id in elist$err1) {
+  #     other <- rbind(other, data[data$user_id == id, ])   # add dataset that y is no binary
+  #   }
   other <- NULL
   for (id in elist$err4) {
     other <- rbind(other, data[data$user_id == id, ])   # add dataset that cann't train a model

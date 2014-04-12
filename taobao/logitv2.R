@@ -60,13 +60,13 @@ getcount <- function(data) {
   # result is not ideal which p and r both decreased
   calwlength <- function(v) { # add weight to users' action. 1: 4: 4: 3
     len <- 0
-    weight = c(1, 4, 4, 3)
+    weight = c(1, 0, 3, 3)
     for (i in v) {
       len <- len + 1 * weight[i+1]
     }
     return (len)
   }
-  return (aggregate(type ~ brand_id, data = data, FUN = length))
+  return (aggregate(type ~ brand_id, data = data, FUN = calwlength))
 }
 
 # get the data to be predicted
@@ -76,7 +76,7 @@ getwpredicteddata <- function(data) {
   date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
   date[1] <- as.Date("2014/4/14")
   date[5] <- as.Date("2014/8/16") # cut doesn't include the edge of the range
-  data <- data[data$type == 0, ]
+  # data <- data[data$type == 0, ]
   if (nrow(data) == 0) {
     return (NULL) # for user's record that don't have click action. Maybe include buy or car or save action.. e.g.: user_id = 71250
   }
@@ -93,7 +93,7 @@ getwpredicteddata <- function(data) {
       d <- res[[name]]
       if (!is.null(d)) {
         if (id %in% d$brand_id) {
-          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 1)
+          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.45)
         }
       }
     }
@@ -135,7 +135,7 @@ predictnormal <- function(data) {
   # param data: all users' data ordered by user_id, brand_id and visit_datetime
   # return a list containing user's id and predicted brand ids
   wrapper <- function(id) {
-    print(id)
+    # print(id)
     oneuser <- data[data$user_id == id, ]
     modeldata <- getmodeldata(oneuser)
     if (is.null(modeldata)) {
@@ -203,7 +203,7 @@ predictother <- function(normaldata, otherdata) {
   globalmodel <- trainmodel(allmodeldata)
   
   wrapper <- function(id) {
-    print(id)
+    # print(id)
     one <- otherdata[otherdata$user_id == id, ]
     predicteddata <- getwpredicteddata(one)
     if (is.null(predicteddata)) {
@@ -251,6 +251,13 @@ main <- function(data, filename = "") {
   savedata(reslist, filename)
 }
 
+printerror <- function(errlist) {
+    cat("err1: not binary model datasets' length is", length(errlist[["err1"]]), "\n")
+    cat("err2: cannot get wpredicted datasets' length is", length(errlist[["err2"]]), "\n")
+    cat("err3: no output length is", length(errlist[["err3"]]), "\n")
+    cat("err4: cannot build model length is", length(errlist[["err4"]]), "\n")
+}
+
 mainV2 <- function(data, filename = "") {
   res <- seperatedata(data)
   
@@ -261,7 +268,8 @@ mainV2 <- function(data, filename = "") {
   # 2. -1 or -2, indicating error occurred, which is usually for getwpredicteddata or getmodeldata failed
   # 3. chr(0), indicating that we predicted nothing
   elist <- geterrlist(reslist)
-  print(elist) # TODO handler this users' data
+  #print(elist) # TODO handler this users' data
+  printerror(elist)
   savedata(reslist, filename)
   
   # step 2: using unnormal data to predict
@@ -277,6 +285,7 @@ mainV2 <- function(data, filename = "") {
   }
   reslist <- predictother(res$normal, other)
   elist <- geterrlist(reslist)
-  print(elist) # TODO handler this users' data
+  printerror(elist)
+  #print(elist) # TODO handler this users' data
   savedata(reslist, filename)
 }
