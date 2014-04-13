@@ -60,7 +60,7 @@ getcount <- function(data) {
   # result is not ideal which p and r both decreased
   calwlength <- function(v) { # add weight to users' action. 1: 4: 4: 3
     len <- 0
-    weight = c(1, 0, 3, 3)
+    weight = c(1, 0, 4, 4)
     for (i in v) {
       len <- len + 1 * weight[i+1]
     }
@@ -93,7 +93,7 @@ getwpredicteddata <- function(data) {
       d <- res[[name]]
       if (!is.null(d)) {
         if (id %in% d$brand_id) {
-          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.45)
+          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.6)
         }
       }
     }
@@ -114,7 +114,7 @@ trainmodel <- function(modeldata) {
   s <- summary(glm_mod)
   if (nrow(s$coefficients) == 1)
     return (NULL)
-  if (nrow(s$coefficients) == 2 & s$coefficients[2, 4] > 0.05)
+  if (nrow(s$coefficients) == 2 & s$coefficients[2, 4] > 0.1)
     return (NULL)
   return (glm_mod)
 }
@@ -198,10 +198,12 @@ predictother <- function(normaldata, otherdata) {
   }
   part <- allmodeldata[allmodeldata$y == 0, ]
   part <- part[order(part$x), ]
-  part <- part[c(1:round(0.8 * nrow(part))), ] # cut off param: 0.8
+  part <- part[c(1:round(0.875 * nrow(part))), ] # cut off param: 0.8
   allmodeldata <- rbind(part, allmodeldata[allmodeldata$y == 1, ])
   globalmodel <- trainmodel(allmodeldata)
   
+  # print(summary(globalmodel)) #seems a very robust model
+
   wrapper <- function(id) {
     # print(id)
     one <- otherdata[otherdata$user_id == id, ]
@@ -283,6 +285,9 @@ mainV2 <- function(data, filename = "") {
   for (id in elist$err4) {
     other <- rbind(other, data[data$user_id == id, ])   # add dataset that cann't train a model
   }
+#   for (id in elist$err3) {
+#     other <- rbind(other, data[data$user_id == id, ])   # add dataset that cann't get output from their own model
+#   }
   reslist <- predictother(res$normal, other)
   elist <- geterrlist(reslist)
   printerror(elist)
