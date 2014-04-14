@@ -21,9 +21,9 @@ getmodeldata <- function(data, c = 0.8) {
     print("y is not binary, actually is unary, e.g. user_id: 4054000")
     return (NULL)
   }
-  if (nrow(notbuy) != 1) { 
+  if (nrow(notbuy) / (nrow(buy) + nrow(notbuy)) > 0.6) { 
     notbuy <- notbuy[order(notbuy[, 1]), ]
-    notbuy <- notbuy[c(1:round(c*nrow(notbuy))), ] # remove top clicks records
+    notbuy <- notbuy[c(1:round(c*nrow(notbuy))), , drop = FALSE] # remove top clicks records
   }
   buy[, 1] <- buy[, 1] / buy[, 2] # average the click times as the buy times
   buy[, 2] <- 1
@@ -60,7 +60,7 @@ getcount <- function(data) {
   # result is not ideal which p and r both decreased
   calwlength <- function(v) { # add weight to users' action. 1: 4: 4: 3
     len <- 0
-    weight = c(1, 0, 4, 4)
+    weight = c(1, 0, 3, 3)
     for (i in v) {
       len <- len + 1 * weight[i+1]
     }
@@ -93,7 +93,7 @@ getwpredicteddata <- function(data) {
       d <- res[[name]]
       if (!is.null(d)) {
         if (id %in% d$brand_id) {
-          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.6)
+          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.59)
         }
       }
     }
@@ -194,12 +194,12 @@ predictother <- function(normaldata, otherdata) {
   allmodeldata <- NULL
   for (id in ids) { # for normal dataset we build a global logistic model
     one <- normaldata[normaldata$user_id == id, ]
-    allmodeldata <- rbind(allmodeldata, getmodeldata(one, 1))
+    allmodeldata <- rbind(allmodeldata, getmodeldata(one, 0.8))
   }
-  part <- allmodeldata[allmodeldata$y == 0, ]
-  part <- part[order(part$x), ]
-  part <- part[c(1:round(0.875 * nrow(part))), ] # cut off param: 0.8
-  allmodeldata <- rbind(part, allmodeldata[allmodeldata$y == 1, ])
+#   part <- allmodeldata[allmodeldata$y == 0, ]
+#   part <- part[order(part$x), ]
+#   part <- part[c(1:round(0.9 * nrow(part))), ] # cut off param: 0.8
+#   allmodeldata <- rbind(part, allmodeldata[allmodeldata$y == 1, ])
   globalmodel <- trainmodel(allmodeldata)
   
   # print(summary(globalmodel)) #seems a very robust model
