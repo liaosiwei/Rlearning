@@ -17,7 +17,7 @@ filterdata <- function(one_person_data) {
   list(res = result, rest = rest_mat)
 }
 
-getone <- function(id, data) {
+getone <- function(id) {
   return (data[data$user_id == id, ])
 }
 

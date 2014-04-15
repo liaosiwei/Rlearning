@@ -17,8 +17,11 @@ getmodeldata <- function(data, c = 0.8) {
   buy <- matrix(buy, ncol = cols)
   notbuy <- matrix(notbuy, ncol = cols)
   
+  buy <- subset(buy, buy[, 1] != 0)
+  notbuy <- subset(notbuy, notbuy[, 1] != 0)
+  
   if (nrow(buy) == 0 | nrow(notbuy) == 0) {
-    print("y is not binary, actually is unary, e.g. user_id: 4054000")
+    #print("y is not binary, actually is unary, e.g. user_id: 4054000")
     return (NULL)
   }
   if (nrow(notbuy) / (nrow(buy) + nrow(notbuy)) > 0.6) { 
@@ -27,8 +30,7 @@ getmodeldata <- function(data, c = 0.8) {
   }
   buy[, 1] <- buy[, 1] / buy[, 2] # average the click times as the buy times
   buy[, 2] <- 1
-  buy <- subset(buy, buy[, 1] != 0)
-  notbuy <- subset(notbuy, notbuy[, 1] != 0)
+
   d <- data.frame(x = c(notbuy[, 1], buy[, 1]), y = c(notbuy[, 2], buy[, 2])) # new data to pass to glm
   return (d)
 }
@@ -55,12 +57,11 @@ gaussian <- function(input, sigma = 0.8) {
   return (exp(-input^2 / (2*sigma^2)))
 }
 
-getcount <- function(data) {
+getcount <- function(data, weight = c(1, 0, 3, 3)) {
   # data: one user's data
   # result is not ideal which p and r both decreased
   calwlength <- function(v) { # add weight to users' action. 1: 4: 4: 3
     len <- 0
-    weight = c(1, 0, 3, 3)
     for (i in v) {
       len <- len + 1 * weight[i+1]
     }
@@ -71,7 +72,7 @@ getcount <- function(data) {
 
 # get the data to be predicted
 # add weight to data based on different month
-getwpredicteddata <- function(data) {
+getwpredicteddata <- function(data, weight = c(1, 0, 3, 3), sigma = 0.45) {
   # data: original one user's data
   date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
   date[1] <- as.Date("2014/4/14")
@@ -82,7 +83,7 @@ getwpredicteddata <- function(data) {
   }
   datefact <- cut(as.Date(factor(data$visit_datetime)), date, labels = c(1, 2, 3, 4))
   
-  res <- by(data, datefact, getcount)
+  res <- by(data, datefact, getcount, weight)
   mergedata <- data.frame(list(brand_id = unique(data$brand_id)))
   mergedata$num <- 0
   nms <- names(res)
@@ -93,7 +94,7 @@ getwpredicteddata <- function(data) {
       d <- res[[name]]
       if (!is.null(d)) {
         if (id %in% d$brand_id) {
-          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), 0.59)
+          tempval <- tempval + d[d$brand_id == id, 2] * gaussian(4-as.numeric(name), sigma)
         }
       }
     }
@@ -114,7 +115,7 @@ trainmodel <- function(modeldata) {
   s <- summary(glm_mod)
   if (nrow(s$coefficients) == 1)
     return (NULL)
-  if (nrow(s$coefficients) == 2 & s$coefficients[2, 4] > 0.1)
+  if (nrow(s$coefficients) == 2 & s$coefficients[2, 4] > 0.05)
     return (NULL)
   return (glm_mod)
 }
@@ -131,11 +132,11 @@ dopredict <- function(glm_mod, predicteddata) {
 
 
 # perform logistic regression on all user data
-predictnormal <- function(data) {
+predictnormal <- function(data, getmodeldata = getmodeldata) {
   # param data: all users' data ordered by user_id, brand_id and visit_datetime
   # return a list containing user's id and predicted brand ids
   wrapper <- function(id) {
-    # print(id)
+    #print(id)
     oneuser <- data[data$user_id == id, ]
     modeldata <- getmodeldata(oneuser)
     if (is.null(modeldata)) {
@@ -194,12 +195,12 @@ predictother <- function(normaldata, otherdata) {
   allmodeldata <- NULL
   for (id in ids) { # for normal dataset we build a global logistic model
     one <- normaldata[normaldata$user_id == id, ]
-    allmodeldata <- rbind(allmodeldata, getmodeldata(one, 0.8))
+    allmodeldata <- rbind(allmodeldata, getmodeldata(one, 1))
   }
-#   part <- allmodeldata[allmodeldata$y == 0, ]
-#   part <- part[order(part$x), ]
-#   part <- part[c(1:round(0.9 * nrow(part))), ] # cut off param: 0.8
-#   allmodeldata <- rbind(part, allmodeldata[allmodeldata$y == 1, ])
+  part <- allmodeldata[allmodeldata$y == 0, ]
+  part <- part[order(part$x), ]
+  part <- part[c(1:round(0.8 * nrow(part))), ] # cut off param: 0.8
+  allmodeldata <- rbind(part, allmodeldata[allmodeldata$y == 1, ])
   globalmodel <- trainmodel(allmodeldata)
   
   # print(summary(globalmodel)) #seems a very robust model
@@ -255,9 +256,13 @@ main <- function(data, filename = "") {
 
 printerror <- function(errlist) {
     cat("err1: not binary model datasets' length is", length(errlist[["err1"]]), "\n")
+    cat("\t", errlist[["err1"]][c(1:10)], "\n")
     cat("err2: cannot get wpredicted datasets' length is", length(errlist[["err2"]]), "\n")
+    cat("\t", errlist[["err2"]][c(1: 10)], "\n")
     cat("err3: no output length is", length(errlist[["err3"]]), "\n")
+    cat("\t", errlist[["err3"]][c(1: 10)], "\n")
     cat("err4: cannot build model length is", length(errlist[["err4"]]), "\n")
+    cat("\t", errlist[["err4"]][c(1: 10)], "\n")
 }
 
 mainV2 <- function(data, filename = "") {
@@ -272,6 +277,7 @@ mainV2 <- function(data, filename = "") {
   elist <- geterrlist(reslist)
   #print(elist) # TODO handler this users' data
   printerror(elist)
+  print("------------------------------------------------")
   savedata(reslist, filename)
   
   # step 2: using unnormal data to predict
