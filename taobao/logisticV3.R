@@ -85,7 +85,7 @@ trainGlobalModel <- function(nd) {
   globalmodel <- trainmodel(newdata)
 }
 
-predictOD <- function(gModel, odata, weight = c(1, 0, 4, 4)) {
+predictOD <- function(gModel, odata, weight = c(1, 0, 4, 4), sigma = 1) {
   # data: the original ordered data, unnormal data
 
   
@@ -94,7 +94,7 @@ predictOD <- function(gModel, odata, weight = c(1, 0, 4, 4)) {
   wrapper <- function(id) {
     
     one <- odata[odata$user_id == id, ]
-    predicteddata <- getwpredicteddata(one, weight = weight)
+    predicteddata <- getwpredicteddata(one, weight = weight, sigma = sigma)
     if (is.null(predicteddata)) {
       return (NULL)
     }

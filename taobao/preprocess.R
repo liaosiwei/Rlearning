@@ -21,6 +21,25 @@ getone <- function(id) {
   return (data[data$user_id == id, ])
 }
 
+getPredictedData <- function(one) {
+  # one: one user's data
+  # return the data to input to getwpredicteddata
+  result <- NULL
+  brand_ids <- as.integer(levels(factor(one$brand_id)))
+  for (id in brand_ids) {
+    userdata <- one[one$brand_id == id, ]
+    buy <- userdata[userdata$type == 1, ]
+    if (nrow(buy) > 0) {
+      max_time <- max(buy$visit_datetime)
+      after_time <- which(userdata$visit_datetime > max_time)
+      before_time <- which(userdata$visit_datetime <= max_time & userdata$type != 0 & userdata$type != 1)
+      userdata <- userdata[c(after_time, before_time), ]
+    }
+    result <- rbind(result, userdata)
+  }
+  result
+}
+
 # get the user that his records only include buy
 allsameuser <- function(data, type) {
   # data: original data

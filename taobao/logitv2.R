@@ -74,6 +74,7 @@ getcount <- function(data, weight = c(1, 0, 3, 3)) {
 # add weight to data based on different month
 getwpredicteddata <- function(data, weight = c(1, 0, 3, 3), sigma = 0.45) {
   # data: original one user's data
+  data <- getPredictedData(data)
   date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
   date[1] <- as.Date("2014/4/14")
   date[5] <- as.Date("2014/8/16") # cut doesn't include the edge of the range
