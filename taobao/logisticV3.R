@@ -1,45 +1,48 @@
 library(DMwR)
 
 getMD <- function(onedata) {
-  newdata <- filterdata(onedata)$res
-  valid <- summary(factor(newdata$type), maxsum = Inf)
-  
-  if (!all(c("0", "1") %in% names(valid))) # tell that the user's action must include click and buy
+    newdata <- filterdata(onedata)$res
+    valid <- summary(factor(newdata$type), maxsum = Inf)
+    
+    if (!all(c("0", "1") %in% names(valid))) # tell that the user's action must include click and buy
     return (NULL)
-  
-  cols <- length(names(valid))
-  tab <- with(newdata, xtabs(~ brand_id + type, newdata))
-  buy <- tab[tab[, 2] != 0, ]
-  notbuy <- tab[tab[, 2] == 0, ]
-  
-  buy <- matrix(buy, ncol = cols)
-  notbuy <- matrix(notbuy, ncol = cols)
-  
-  buy <- subset(buy, buy[, 1] != 0)
-  notbuy <- subset(notbuy, notbuy[, 1] != 0)
-  
-  if (nrow(buy) == 0 | nrow(notbuy) == 0) {
+    
+    cols <- length(names(valid))
+    tab <- with(newdata, xtabs(~ brand_id + type, newdata))
+    buy <- tab[tab[, 2] != 0, ]
+    notbuy <- tab[tab[, 2] == 0, ]
+    
+    buy <- matrix(buy, ncol = cols)
+    notbuy <- matrix(notbuy, ncol = cols)
+    
+    buy <- subset(buy, buy[, 1] != 0)
+    notbuy <- subset(notbuy, notbuy[, 1] != 0)
+    
+    if (nrow(buy) == 0 | nrow(notbuy) == 0) {
     #print("y is not binary, actually is unary, e.g. user_id: 4054000")
     return (NULL)
-  }
-  buy[, 1] <- buy[, 1] / buy[, 2] # average the click times as the buy times
-  buy[, 2] <- 1
-
-  d <- data.frame(x = c(notbuy[, 1], buy[, 1]), y = c(notbuy[, 2], buy[, 2])) # new data to pass to glm
-  d$y <- as.factor(d$y)
-  k <- 0
-  buyrow <- nrow(buy)
-  if (buyrow < 6) {
-    if (buyrow == 1) {
-      d <- rbind(d, list(x = buy[1, 1], y = buy[1, 2]))
-      k <- 1
-    } else {
-      k <- buyrow - 1
     }
-  } else {
-    k <- 5
-  }
-  SMOTE(y ~., d, perc.over=800, perc.under=113, k = k)
+    buy[, 1] <- buy[, 1] / buy[, 2] # average the click times as the buy times
+    buy[, 2] <- 1
+    
+    d <- data.frame(x = c(notbuy[, 1], buy[, 1]), y = c(notbuy[, 2], buy[, 2])) # new data to pass to glm
+    d$y <- as.factor(d$y)
+    k <- 0
+    buyrow <- nrow(buy)
+#   if (buyrow < 6) {
+#     if (buyrow < 4) {
+# #       d <- rbind(d, list(x = buy[1, 1], y = buy[1, 2]))
+# #       k <- 1
+#         return (NULL)
+#     } else {
+#       k <- buyrow - 1
+#     }
+#   } else {
+#     k <- 5
+#   }
+    if (buyrow < 6)
+        return (NULL)
+    SMOTE(y ~., d, perc.over=300, perc.under=133)
 }
 
 predictND <- function(data) {
@@ -81,11 +84,11 @@ trainGlobalModel <- function(nd) {
     allmodeldata <- rbind(allmodeldata, getmodeldata(one, 1))
   }
   allmodeldata$y <- as.factor(allmodeldata$y)
-  newdata <- SMOTE(y ~., allmodeldata, perc.over=600, perc.under=117)
+  newdata <- SMOTE(y ~., allmodeldata, perc.over=200, perc.under=150)
   globalmodel <- trainmodel(newdata)
 }
 
-predictOD <- function(gModel, odata, weight = c(1, 0, 4, 4), sigma = 1) {
+predictOD <- function(gModel, odata, weight = c(1, 0, 4, 4), sigma = 0.5) {
   # data: the original ordered data, unnormal data
 
   

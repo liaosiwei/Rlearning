@@ -70,11 +70,35 @@ getcount <- function(data, weight = c(1, 0, 3, 3)) {
   return (aggregate(type ~ brand_id, data = data, FUN = calwlength))
 }
 
+getCount <- function(data, weight = c(1, 0, 3, 3)) {
+    calwlength <- function(v) {
+        len <- 0
+        div <- 0
+        wt <- weight
+        wt[1] <- wt[1] / 2
+        w <- which(v == 1)
+        if (length(w) > 0) {
+            div <- max(w)
+        }
+        k <- 1
+        for (i in v) {
+            if (k < div) {
+                len <- len + 1 * wt[i+1]
+            } else {
+                len <- len + 1 * weight[i+1]
+            }
+            k <- k + 1
+        }
+        len
+    }
+    aggregate(type ~ brand_id, data = data, FUN = calwlength)
+}
+
 # get the data to be predicted
 # add weight to data based on different month
 getwpredicteddata <- function(data, weight = c(1, 0, 3, 3), sigma = 0.45) {
   # data: original one user's data
-  data <- getPredictedData(data)
+  #data <- getPredictedData(data)
   date <- as.Date(seq(as.Date("2014/4/15"), as.Date("2014/8/15"), length.out = 5))
   date[1] <- as.Date("2014/4/14")
   date[5] <- as.Date("2014/8/16") # cut doesn't include the edge of the range
@@ -84,7 +108,7 @@ getwpredicteddata <- function(data, weight = c(1, 0, 3, 3), sigma = 0.45) {
   }
   datefact <- cut(as.Date(factor(data$visit_datetime)), date, labels = c(1, 2, 3, 4))
   
-  res <- by(data, datefact, getcount, weight)
+  res <- by(data, datefact, getCount, weight)
   mergedata <- data.frame(list(brand_id = unique(data$brand_id)))
   mergedata$num <- 0
   nms <- names(res)
@@ -133,7 +157,7 @@ dopredict <- function(glm_mod, predicteddata) {
 
 
 # perform logistic regression on all user data
-predictnormal <- function(data, getmodeldata = getmodeldata) {
+predictnormal <- function(data) {
   # param data: all users' data ordered by user_id, brand_id and visit_datetime
   # return a list containing user's id and predicted brand ids
   wrapper <- function(id) {
@@ -300,4 +324,45 @@ mainV2 <- function(data, filename = "") {
   printerror(elist)
   #print(elist) # TODO handler this users' data
   savedata(reslist, filename)
+}
+
+mainV4 <- function(filename = "") {
+    # step 1: using normal data to predict
+    gModel <- trainGlobalModel(res$normal)
+    reslist <- predictOD(gModel, res$normal, sigma = 0.75)
+    # after step 1, we got 3 kinds of error because some users' data is not applicable for step 1
+    # 1. normal brand id list
+    # 2. -1 or -2, indicating error occurred, which is usually for getwpredicteddata or getmodeldata failed
+    # 3. chr(0), indicating that we predicted nothing
+    elist <- geterrlist(reslist)
+    #print(elist) # TODO handler this users' data
+    printerror(elist)
+    savedata(reslist, filename)
+    print("------------------------------------------------")
+    # step 2: using unnormal data to predict
+    # the data include res$cnb, res$bnc, res$nbnc
+    other <- res$cnb
+    # other <- rbind(other, res$nbnc) # res$nbnc is empty
+    for (id in elist$err1) {
+        other <- rbind(other, data[data$user_id == id, ])   # add dataset that y is no binary
+    }
+    for (id in elist$err4) {
+        other <- rbind(other, data[data$user_id == id, ])   # add dataset that cann't train a model
+    }
+    #   for (id in elist$err3) {
+    #     other <- rbind(other, data[data$user_id == id, ])   # add dataset that cann't get output from their own model
+    #   }
+    
+    reslist <- predictOD(gModel, other)
+    elist <- geterrlist(reslist)
+    printerror(elist)
+    #print(elist) # TODO handler this users' data
+    savedata(reslist, filename)
+    print("------------------------------------------------")
+    # step 3: using global model to predict users which is res$bnc
+    reslist <- predictOD(gModel, res$bnc, weight = c(0, 2, 4, 4), sigma = 0.8)
+    elist <- geterrlist(reslist)
+    printerror(elist)
+    #print(elist) # TODO handler this users' data
+    savedata(reslist, filename)
 }
